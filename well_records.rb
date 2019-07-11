@@ -1,4 +1,4 @@
-require 'open-uri'
+require "open-uri"
 
 module Importer
   module Oklahoma
@@ -7,7 +7,7 @@ module Importer
 
       HOST = "http://imaging.occeweb.com/"
       OGWR_PATH = "imaging/OGWellRecords.aspx"
-      AWS_BUCKET_PATH = "well_data/WY/scraped"
+      AWS_BUCKET_PATH = "well_data/OK/scraped"
       RENAME = {
         "ID" => "filing_id",
         "Form" => "document_type",
@@ -25,19 +25,12 @@ module Importer
       end
 
       def run
-        goto_uri
+        unless browser.url == uri
+          goto_uri
+          fill_dates
+          submit_form
+        end
 
-        fill_dates
-        submit_form
-
-        collect_rows
-
-        close_browser
-      end
-
-      private
-
-      def collect_rows
         part_of_pages = numbers_of_pages.next
 
         part_of_pages.each do |page_number|
@@ -60,19 +53,20 @@ module Importer
             upload_pdf(file, owr)
           end
 
-          return if page_number == count_of_pages
+          if page_number == count_of_pages
+            close_browser
+            return
+          end
 
           if page_number == part_of_pages.last
             next_pages_link.click
-            collect_rows
+            run
           end
         end
       end
 
-      def strpdate(date)
-        return "" unless date.present?
-
-        Date.strptime(date, "%m/%d/%Y")
+      def numbers_of_pages
+        @numbers_of_pages ||= [*1..count_of_pages].each_slice(10).cycle
       end
 
       def count_of_documents
@@ -99,10 +93,6 @@ module Importer
 
       def headers
         table.rows[1].text.split(" ")
-      end
-
-      def numbers_of_pages
-        @numbers_of_pages ||= [*1..count_of_pages].each_slice(10).cycle
       end
 
       def get_numbers_of_pages
@@ -134,10 +124,6 @@ module Importer
         browser.input(name: "txtScanDateTo").send_keys(format_date(ends_at))
       end
 
-      def format_date(date)
-        date.strftime("%m/%d/%Y")
-      end
-
       def uri
         URI.join(HOST, OGWR_PATH).to_s
       end
@@ -146,11 +132,11 @@ module Importer
         open(url)
       rescue => e
         Rails.logger.info("Download failed - #{e}")
+        raise
       end
 
       def upload_pdf(file, owr)
-        # NOTE: format "[API]+\_+[Form]+\_+[ID].pdf"
-        filename = "#{owr.api}\\_#{owr.document_type}\\_#{owr.filing_id}"
+        filename = "#{owr.api}_#{owr.document_type}_#{owr.filing_id}"
 
         Rails.logger.info("Uploading to S3 - #{filename}.pdf")
         client.put_object(
@@ -169,6 +155,18 @@ module Importer
 
       def goto_uri
         browser.goto(uri)
+      end
+
+      private
+
+      def format_date(date)
+        date.strftime("%m/%d/%Y")
+      end
+
+      def strpdate(date)
+        return "" unless date.present?
+
+        Date.strptime(date, "%m/%d/%Y")
       end
 
       def client
