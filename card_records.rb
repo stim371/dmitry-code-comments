@@ -35,7 +35,7 @@ module NewMexico
 
       browser.wait_until { |b| b.table(id: "ctl00_ctl00__main_main_gvResults").exists? }
 
-      Array.new(count_of_pages) { |i| (i + 1).to_s }.each do |page_number|
+      1.upto(count_of_pages).map(&:to_s).each do |page_number|
         link = pagination.link(text: page_number)
 
         link.click unless link.class_name == "active"
@@ -47,7 +47,7 @@ module NewMexico
           query_params["scan_date"] = strpdate(query_params["scan_date"])
           query_params["well_card_url"] = row.link.href
 
-          NewMexicoQueryRecord.new(query_params).save
+          NewMexicoQueryRecord.create!(query_params)
 
           browser.execute_script("window.open(\"#{query_params["well_card_url"]}\")")
 
@@ -66,7 +66,7 @@ module NewMexico
                 filing_date: filing_date(query_params["scan_date"])
               )
 
-            card_params["document_url"] = "s3://bucket/#{AWS_BUCKET_PATH}/#{filename}"
+            card_params["document_url"] = "s3://bucket/#{AWS_BUCKET_PATH}#{filename}"
 
             file = download_pdf(card_params["location_url"])
             upload_pdf(file, filename)
@@ -75,7 +75,7 @@ module NewMexico
           card_params["scrape_url"] = browser.url
           card_params["well_files_url"] = well_files_url
 
-          NewMexicoCardRecord.new(card_params).save
+          NewMexicoCardRecord.create!(card_params)
 
           browser.windows.last.close
         end
@@ -90,12 +90,6 @@ module NewMexico
 
     def filename(file_url: , document_type: , permit_id: , filing_date: )
       "#{file_url.split("/").last[0...-4]}_#{document_type}_#{permit_id}_#{filing_date}.pdf"
-    end
-
-    def strpdate(date)
-      return "" unless date.present?
-
-      Date.strptime(date, "%m/%d/%Y")
     end
 
     def pagination
@@ -145,11 +139,7 @@ module NewMexico
     def well_files_url
       button = browser.button(name: "ctl00$ctl00$_main$main$btnWellFile")
 
-      if button.exists?
-        button.onclick.match(/'(.*?)'/)[1]
-      else
-        ""
-      end
+      button.exists? ? button.onclick.match(/'(.*?)'/)[1] : ""
     end
 
     def headers
@@ -161,7 +151,7 @@ module NewMexico
     end
 
     def submit_form
-      browser.button(name: "ctl00$ctl00$_main$main$btnfilter").click
+      browser.button(name: "ctl00$ctl00$_main$main$btnfilter").click!
     end
 
     def uri
@@ -176,15 +166,15 @@ module NewMexico
     end
 
     def upload_pdf(file, filename)
-      Rails.logger.info("Uploading to S3 - #{filename}.pdf")
+      Rails.logger.info("Uploading to S3 - #{filename}")
       client.put_object(
         body: file.read,
         bucket: "bucket",
-        key: "#{AWS_BUCKET_PATH}#{filename}.pdf",
+        key: "#{AWS_BUCKET_PATH}#{filename}",
         content_type: "application/pdf"
       )
     rescue
-      Rails.logger.info("Upload failed - #{filename}.pdf")
+      Rails.logger.info("Upload failed - #{filename}")
       raise
     end
 
@@ -213,7 +203,7 @@ module NewMexico
     end
 
     def browser
-      @browser ||= Watir::Browser.new(:chrome)#, headless: true)
+      @browser ||= Watir::Browser.new(:chrome, headless: true)
     end
   end
 end
