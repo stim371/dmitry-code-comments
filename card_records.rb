@@ -29,7 +29,7 @@ module NewMexico
     }.freeze
 
     def run
-      goto(uri)
+      browser.goto(uri)
       fill_form
       submit_form
 
@@ -115,17 +115,18 @@ module NewMexico
 
       browser.tables.first.rows.map do |row|
         row.cells.map do |c|
-          c.attribute_value('textContent').squish
+          c.attribute_value("textContent").squish
         end
       end.to_h.transform_keys do |key|
-        RENAME2.fetch(key, "")
-      end.select { |key, value| key.present? }
+        RENAME2[key]
+      end.select { |key, _value| key.present? }
     end
 
     def row_params(row)
-      [
-        *headers.zip(cells_text_of_row(row))
-      ].to_h.transform_keys { |key| RENAME.fetch(key) }
+      headers.
+        zip(cells_text_of_row(row)).
+        to_h.
+        transform_keys { |key| RENAME[key] }
     end
 
     def cells_text_of_row(row)
@@ -139,7 +140,7 @@ module NewMexico
     def well_files_url
       button = browser.button(name: "ctl00$ctl00$_main$main$btnWellFile")
 
-      button.exists? ? button.onclick.match(/'(.*?)'/)[1] : ""
+      button.exists? ? button.onclick.match(/'(.*)'/)[1] : ""
     end
 
     def headers
@@ -180,10 +181,6 @@ module NewMexico
 
     def close_browser
       browser.close
-    end
-
-    def goto(uri)
-      browser.goto(uri)
     end
 
     private

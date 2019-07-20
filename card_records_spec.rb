@@ -1,4 +1,4 @@
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe NewMexico::CardRecords, type: :service do
   let(:file_prefix) { "file://#{Rails.root}/" }
@@ -8,25 +8,11 @@ RSpec.describe NewMexico::CardRecords, type: :service do
   end
 
   context "Other" do
-    describe "#goto" do
-      it "goes to certain url" do
-        url = "#{file_prefix}#{file_fixture("Stage_1.htm")}"
-
-        subject.goto(url)
-
-        expect(subject.send(:browser).url).to eq url
-      end
-    end
-
     describe "#uri" do
       it "returns correct uri" do
         correct_uri = "https://wwwapps.emnrd.state.nm.us/ocd/ocdpermitting/OperatorData/PermitStatusParameters.aspx"
 
         expect(subject.uri).to eq correct_uri
-      end
-
-      it "returns string" do
-        expect(subject.uri).to be_a String
       end
     end
 
@@ -52,7 +38,6 @@ RSpec.describe NewMexico::CardRecords, type: :service do
       it "downloads pdf file" do
         file = subject.download_pdf(url)
 
-        expect(file.size).to_not be_nil
         expect(file.size).to_not be_zero
       end
 
@@ -158,15 +143,15 @@ RSpec.describe NewMexico::CardRecords, type: :service do
             "scan_date" => Date.parse("2019-07-16")
           }
 
-        nm_card_record = NewMexicoCardRecord.take
+        nm_card_record = NewMexicoCardRecord.first
         nm_card_record_expected_params =
           {
-            "permit_id"=>"269757",
-            "operator_name"=>"FASKEN OIL & RANCH LTD [151416]",
-            "well_name_full"=>"DENTON SWD #003",
-            "location"=>"M-12-15S-37E",
-            "previous_name"=>"",
-            "new_name"=>"",
+            "permit_id" => "269757",
+            "operator_name" => "FASKEN OIL & RANCH LTD [151416]",
+            "well_name_full" => "DENTON SWD #003",
+            "location" => "M-12-15S-37E",
+            "previous_name" => "",
+            "new_name" => "",
           }
 
         expect(nm_query_record.attributes).to include nm_query_record_expected_params
@@ -190,9 +175,10 @@ RSpec.describe NewMexico::CardRecords, type: :service do
       it "returns rows without headers" do
         headers = ["Id", "Type", "Description", "Status", "Status Date"]
 
-        first_row_text = subject.rows.first.cells.map(&:text)
+        first_row = subject.rows.first
+        row_text = first_row.cells.map(&:text)
 
-        expect(first_row_text).to_not eq headers
+        expect(row_text).to_not eq headers
       end
     end
 
@@ -277,14 +263,14 @@ RSpec.describe NewMexico::CardRecords, type: :service do
       it "returns params of table" do
         expected_params =
           {
-            "permit_id"=>"269757",
-            "scan_date"=>"7/16/2019",
-            "operator_name"=>"FASKEN OIL & RANCH LTD [151416]",
-            "well_name_full"=>"DENTON SWD #003",
-            "location"=>"M-12-15S-37E",
-            "previous_name"=>"",
-            "new_name"=>"",
-            "effective_date"=>""
+            "permit_id" => "269757",
+            "scan_date" => "7/16/2019",
+            "operator_name" => "FASKEN OIL & RANCH LTD [151416]",
+            "well_name_full" => "DENTON SWD #003",
+            "location" => "M-12-15S-37E",
+            "previous_name" => "",
+            "new_name" => "",
+            "effective_date" => ""
           }
 
         expect(subject.table_params).to eq expected_params
