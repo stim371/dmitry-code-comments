@@ -71,7 +71,7 @@ RSpec.describe NewMexico::CardRecords, type: :service do
 
       allow(subject).to receive(:uri).and_return(uri)
 
-      subject.goto(uri)
+      subject.send(:browser).goto(uri)
     end
 
     describe "#submit_form" do
@@ -107,7 +107,7 @@ RSpec.describe NewMexico::CardRecords, type: :service do
 
       allow(subject).to receive(:uri).and_return(uri)
 
-      subject.goto(uri)
+      subject.send(:browser).goto(uri)
     end
 
     describe "#run" do
@@ -117,7 +117,6 @@ RSpec.describe NewMexico::CardRecords, type: :service do
       before(:each) do
         allow(subject).to receive(:download_pdf)
         allow(subject).to receive(:upload_pdf)
-        allow(subject).to receive(:goto)
         allow(subject).to receive(:fill_form)
         allow(subject).to receive(:submit_form)
         allow_any_instance_of(Watir::Row).to receive(:link).and_return(double(href: stage_four_file))
@@ -229,9 +228,8 @@ RSpec.describe NewMexico::CardRecords, type: :service do
 
       allow(subject).to receive(:uri).and_return(uri)
 
-      subject.goto(uri)
+      subject.send(:browser).goto(uri)
     end
-
 
     describe "#well_files_url" do
       context "when well files button exists" do
